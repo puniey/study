@@ -1,0 +1,132 @@
+class Solution1 {
+public:
+    bool isPalindrome(int x) {
+        if (x < 0)
+        {
+            return false;
+        }
+        else if (x/ 10 == 0)
+        {
+            return true;
+        }
+        
+        string str;
+        while (x)
+        {
+            int n = x % 10;
+            char c = n + '0';
+            str = c + str;
+            x /= 10;
+        }
+        
+        int i = 0;
+        int j = str.size() - 1;
+        if (i > j)
+        {
+            return false;
+        }
+        while (i <= j)
+        {
+            if (str[i] == str[j])
+            {
+                ++i;
+                --j;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+class Solution2 {
+public:
+    bool isPalindrome(int x) {
+        if (x < 0)
+        {
+            return false;
+        }
+        else if (x / 10 == 0)
+        {
+            return true;
+        }
+        
+        int base = 1;
+        while ((x / base) >= 10)
+        {
+            base *= 10;
+        }
+        
+        while (x)
+        {
+            int right = x % 10;
+            int left  = x / base;
+            if (right == left)
+            {
+                x = x % base;
+                x = x / 10;
+                base /= 100;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+class Solution3 {
+public:
+    bool isPalindrome(int x) {
+        if (x < 0)
+        {
+            return false;
+        }
+        int p = x;
+        int q = 0;
+        
+        while (p >= 10)
+        {
+            q *= 10;
+            q += p % 10;
+            p /= 10;
+        }
+        
+        if ((q == x / 10) && (p == x % 10))
+            return true;
+        else
+            return false;
+    }
+};
+
+class Solution4 {
+public:
+    bool isPalindrome(int x) {
+        if (x < 0)
+        {
+            return false;
+        }
+        if (x / 10 == 0)
+        {
+            return true;
+        }
+        if (x % 10 == 0)
+        {
+            return false;
+        }
+        int p = x, q = 0;
+        while (p > q)
+        {
+            q = 10 * q + p % 10;
+            p /= 10;
+        }
+        if (q > p)
+        {
+            q /= 10;
+        }
+        return p == q;
+    }
+};

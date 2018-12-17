@@ -1,0 +1,25 @@
+    const string delims(" \t.,;");
+	string line;
+	
+	while (getline(cin, line))
+	{
+		string::size_type beginIndex, endIndex;
+		beginIndex = line.find_first_not_of(delims);
+
+		while (beginIndex != string::npos)
+		{
+			endIndex = line.find_first_of(delims, beginIndex);
+			if (endIndex == string::npos)
+			{
+				endIndex = line.length();
+			}
+
+			for (int i = endIndex - 1; i >= (int)beginIndex; --i)
+			{
+				cout << line[i];
+			}
+			cout << " ";
+			beginIndex = line.find_first_not_of(delims, endIndex);
+		}
+		cout << endl;
+	}

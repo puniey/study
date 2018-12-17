@@ -1,0 +1,155 @@
+#include "unp.h"
+//TCP预先派生子进程服务器程序 accept使用文件上锁保护 client.c
+//client发起进程	单进程TCP连接	请求bytes	serv用户时间	serv系统时间
+//1		5000	4000	0(s)		0.188(s)
+//5		5000	4000	0.012(s)	0.94(s)
+//5		10000	4000	0.016(s)	1.908(s)
+//5		5000	8000	0.004(s)	0.964(s)
+//10	5000	4000	0.008(s)	1.912(s)
+//10	5000	8000	0.004(s)	1.92(s)
+#define MAXN	16384
+
+static int nchild;
+static pid_t *pids;
+static int lock_fd = -1;
+static int *cptr;
+#define MAXN	16384
+
+void sig_int(int signo);
+pid_t child_make(int i, int listenfd, int addrlen);
+void child_main(int i, int listenfd, int addrlen);
+void str_echo(int sockfd);
+void my_lock_init(char *pathname);
+
+int main(int argc, char **argv)
+{
+	int		listenfd, i, fd;
+	socklen_t	addrlen;
+
+	if (argc == 3)
+		listenfd = tcp_listen(NULL, argv[1], &addrlen);
+	else if (argc == 2)
+		listenfd = tcp_listen(argv[1], argv[2], &addrlen);
+	else
+	{
+		printf("usage:%s [<host>] <port> <childnum>\n", argv[0]);
+		exit(0);
+	}
+
+	nchild = atoi(argv[argc - 1]);
+	pids = calloc(nchild, sizeof(pid_t));
+	if (pids == NULL)
+	{
+		printf("calloc error\n");
+		exit(0);
+	}
+
+	fd = open("/dev/zero", O_RDWR, 0);
+	cptr = mmap(0, nchild * sizeof(int), PROT_READ | PROT_WRITE, 
+		MAP_SHARED, fd, 0);
+	close(fd);
+
+	my_lock_init("/tmp/lock.XXXXXX");
+	for (i = 0; i < nchild; i++)
+	{
+	 	pids[i] = child_make(i, listenfd, addrlen);
+		//printf("fork pid:%d\n", pids[i]);
+	}
+
+	Signal(SIGINT, sig_int);
+
+	while (1)
+		pause();
+	exit(0);
+}
+
+void sig_int(int signo)
+{
+	int i;
+	for (i = 0; i < nchild; i++)
+	{
+		kill(pids[i], SIGTERM);
+		printf("child %d:%d\n", i, cptr[i]);
+	}
+
+	while (wait(NULL) > 0);
+
+	if (errno != ECHILD)
+	{
+		printf("wait error\n");
+		exit(0);
+	}
+	pr_cpu_time();
+	exit(0);
+}
+
+pid_t child_make(int i, int listenfd, int addrlen)
+{
+	pid_t	pid;
+	
+	if ((pid = fork()) > 0)
+		return pid;
+
+	child_main(i, listenfd, addrlen);
+}
+
+void child_main(int i, int listenfd, int addrlen)
+{
+	int		connfd;
+	socklen_t	clilen;
+	sockaddr_in	cliaddr;
+
+	while (1)
+	{
+		clilen = addrlen;
+		writew_lock(lock_fd, 0, SEEK_SET, 0);
+		//printf("begin accept\n");
+		if ((connfd = accept(listenfd, (sockaddr*)&cliaddr, &clilen)) < 0)
+		{
+			perror("accept error");
+			exit(0);
+		}
+		cptr[i]++;
+		un_lock(lock_fd, 0, SEEK_SET, 0);
+		//printf("accept success\n");
+		str_echo(connfd);
+		close(connfd);
+	}
+}
+
+void str_echo(int sockfd)
+{
+    ssize_t n;
+    char    buf[MAXN];
+    memset(buf, 0, sizeof(buf));
+    
+    while (1)
+    {
+        if (read(sockfd, buf, sizeof(buf)) == 0)
+			break;
+		n = atoi(buf);
+		if (n <= 0 || n > MAXN)
+		{
+			printf("error client request for %d bytes\n", n);
+			break;
+		}
+		memset(buf, 1, sizeof(buf));
+		buf[n] = 0;
+		writen(sockfd, buf, n);
+    }
+}
+
+void my_lock_init(char *pathname)
+{
+	char lock_file[1024];
+	
+	strncpy(lock_file, pathname, sizeof(lock_file));
+
+	if ((lock_fd = mkstemp(lock_file)) < 0)
+	{
+		perror("my_lock_init error");
+		exit(0);
+	}
+
+	unlink(lock_file);
+}
