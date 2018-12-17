@@ -1,4 +1,1 @@
 #study
-iiii
-iii
-iiiiii
