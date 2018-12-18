@@ -12,8 +12,6 @@
 #define TIME_NEAR_MASK (TIME_NEAR-1)
 #define TIME_LEVEL_MASK (TIME_LEVEL-1)
 
-//从skynet中提取处理的定时器实现，用C++和boost进行了改写，可以跨平台使用
-
 struct TimerNode {
 	TimerNode *next;
 	uint32_t expire;
