@@ -3,13 +3,14 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string>
+#include <cstdio>
 
 #define ONE_HOUR	3600	//one hour
 #define ONE_DAY		86400	//one day
 #define ONE_WEEK	604800	//one week
 
 //常用时间相关接口
-
+//返回毫秒
 inline int64_t GetCurrentMS()
 {
 	struct timeval tv;
@@ -102,3 +103,19 @@ inline time_t StringToDatetime(const std::string& str)
 	time_t t_ = mktime(&tm_);                  // 将tm结构体转换成time_t格式。
 	return t_;                                 // 返回值。 
 }
+//测试时间性能
+class CTimeCost
+{
+public:
+	CTimeCost(const std::string& prefix) : m_strPrefix(prefix)
+	{
+		m_tTm = GetTickCountLinux();
+	}
+	~CTimeCost()
+	{
+		fprintf(stderr, "[%s] : cost [%lld](millisec).\n", m_strPrefix.c_str(), GetTickCountLinux() - m_tTm);
+	}
+private:
+	std::string m_strPrefix;
+	int64_t		m_tTm;
+};
